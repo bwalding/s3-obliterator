@@ -225,7 +225,7 @@ func (s3o *S3Obliterator) removeKeyWithRetry(ctx context.Context, logger *logrus
 		// The subtlety here is that you can be rate limited, but it doesn't count to your failure limit
 		failures++
 		if failures < maxFailures {
-			logger.Warnf("Retrying after failure to remove key: %v", errRemove)
+			logger.Warnf("Retrying (%d/%d) after failure to remove key: %v", failures, maxFailures, errRemove)
 			// Just give some time and space for the system to recover before retrying
 			time.Sleep(5 * time.Second)
 			continue
