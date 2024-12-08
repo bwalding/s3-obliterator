@@ -1,0 +1,59 @@
+# s3-obliterator
+
+While a lifecycle policy is the most efficient way to clean out an S3 bucket, it can sometimes be too blunt an instrument.
+
+In such cases, you may need to remove keys from S3 one by one.
+
+At scale, this process is tedious.
+At scale, you need automation.
+At scale, you must respect AWS limits.
+At scale, things can break and need to be restarted.
+
+For such times, the s3-obliterator tool is quite useful.
+
+TIP: You can find solutions on StackOverflow using bash scripts that often ignore rate limits and parallelism. If you prefer that, go ahead. I don't.
+
+
+## Usage
+
+```bash
+go install bwalding/s3-obliterator
+
+AWS_REGION=us-east-1 \
+AWS_PROFILE=my-profile \
+s3-obliterator remove-keys --workers=10 \
+        --bucket=the-bucket-identifier \
+        --key-file=remove-s3-keys.csv
+```
+
+Create `remove-s3-keys.csv` containing key prefixes to be removed.
+
+1. A file `remove-s3-keys.csv.checkpoint` will be created to keep track of the "lowest" key that has been removed.
+
+
+## Prefixes
+
+NOTE: Understanding the prefixing system is important. It closely follows native AWS handling but includes a safety measure to prevent inadvertently removing files that match the same prefix as folders.
+
+Your S3 key file should look like this:
+
+```bash
+alpha
+beta/
+gamma*
+```
+
+- `alpha` is assumed to mean `alpha/` and will remove any key prefixed with `alpha/`
+- `beta/` will remove any key prefixed with `beta/`
+- `gamma*` will remove any key prefixed with `gamma`, e.g., `gamma/globulin.txt` or `gamma-globulin.txt`
+
+
+## Rate Limiting
+
+### References 
+
+- https://aws.amazon.com/about-aws/whats-new/2018/07/amazon-s3-announces-increased-request-rate-performance/
+
+`s3-obliterator` respects the documented S3 rate limiting system. However, as S3 rate limits are shared across an account, other processes may reduce the limits available for S3 obliteration. If rate limits are hit, `s3-obliterator` will pause temporarily to allow the rate limit buffer to catch up.
+
+According to S3 documentation, rate limits are applied per top-level prefix inside an account, although this advice was provided in 2018.
